@@ -1,7 +1,21 @@
 # esphome-hlk-ld6004
 
 ESPHome external component for the Hi-Link HLK-LD6004 60 GHz radar (UART, TinyFrame, 115200 baud).
-Read-only: publishes presence (overall + 4 zones), target count and x/y/z of up to 3 targets.
+Modelled on ESPHome's `ld2450` component. Needs both UART pins (TX is used for config commands).
+
+| Feature | LD6004 support |
+|---|---|
+| Binary sensors | `presence`, `moving_target`, `still_target`, per-zone presence (4) |
+| Sensors | `target_count`, `moving_target_count`, `still_target_count`; per target (3): `x`, `y`, `z`, `distance`, `angle`, `speed` |
+| Select | `sensitivity`, `trigger_speed`, `install_method` (top/side), `operating_mode`, `p20_output` (OUT pin mode) |
+| Number | `delay_time`, `sleep_time`, `output_interval`, `dwell_lifecycle`, `z_min`, `z_max`, `zone` bounds (detection / interference / dwell, zones 1-4) |
+| Button | `auto_interference`, `clear_interference`, `reset_detection_area`, `reset_unmanned`, `clear_dwell` |
+| Text sensor | `version` |
+
+Differences from the LD2450: a target counts as "moving" when its doppler index is non-zero (the radar has no
+separate still/moving flag), `speed` is that raw doppler index, no per-zone target counts, no Bluetooth or
+multi-target switch, no restart/factory-reset, and zones are 3D boxes (x/y/z min/max). Settings are read back
+from the radar 3 s after boot. Changing a zone bound rewrites the whole zone in the radar's flash.
 
 Protocol from [swherdman/HLK-LD6004](https://github.com/swherdman/HLK-LD6004). **Untested on hardware.**
 
