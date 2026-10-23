@@ -1,0 +1,41 @@
+esphome:
+  name: ld6004-presence
+
+esp32:
+  board: seeed_xiao_esp32c6
+  framework:
+    type: esp-idf
+
+logger:
+  hardware_uart: USB_SERIAL_JTAG # keeps UART0 (D6/D7) free for the radar
+
+api:
+ota:
+  - platform: esphome
+wifi:
+  ssid: YOUR_SSID
+  password: YOUR_PASSWORD
+
+external_components:
+  - source:
+      type: local
+      path: components
+
+uart:
+  id: radar_uart
+  tx_pin: GPIO16 # D6
+  rx_pin: GPIO17 # D7
+  baud_rate: 115200
+
+hlk_ld6004:
+  uart_id: radar_uart
+  presence:
+    name: "Radar presence"
+  zones:
+    - name: "Radar zone 1"
+  target_count:
+    name: "Radar targets"
+  targets:
+    - x: { name: "Target 1 X" }
+      y: { name: "Target 1 Y" }
+      z: { name: "Target 1 Z" }
