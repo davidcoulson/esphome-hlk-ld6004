@@ -1,0 +1,82 @@
+# HLK-LD6004 on an ESP32-C3 Super Mini.
+# Wiring: module TX -> GPIO3, module RX -> GPIO4, GND -> GND (common).
+# Module 3V3: its own regulated 3.3 V supply, >=1 A, <=50 mV ripple (NOT the Super Mini 3V3 pin).
+# Optional: module OUT -> any free GPIO (e.g. GPIO5) for a hardware presence line.
+# Needs secrets.yaml with wifi_ssid and wifi_password.
+
+esphome:
+  name: ld6004-presence
+
+esp32:
+  board: esp32-c3-devkitm-1 # ESP32-C3 Super Mini
+  framework:
+    type: esp-idf
+
+logger:
+  hardware_uart: USB_SERIAL_JTAG # native USB logs; leaves UART0 free
+
+api:
+ota:
+  - platform: esphome
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+external_components:
+  - source: github://davidcoulson/esphome-hlk-ld6004
+    components: [hlk_ld6004]
+
+uart:
+  id: radar_uart
+  tx_pin: GPIO4 # -> module RX
+  rx_pin: GPIO3 # <- module TX
+  baud_rate: 115200
+
+hlk_ld6004:
+  id: radar
+  uart_id: radar_uart
+  presence: { name: "Radar presence" }
+  moving_target: { name: "Radar moving target" }
+  still_target: { name: "Radar still target" }
+  zones:
+    - name: "Radar zone 1 presence"
+    - name: "Radar zone 2 presence"
+  target_count: { name: "Radar targets" }
+  moving_target_count: { name: "Radar moving targets" }
+  still_target_count: { name: "Radar still targets" }
+  targets:
+    - x: { name: "Target 1 X" }
+      y: { name: "Target 1 Y" }
+      z: { name: "Target 1 Z" }
+      distance: { name: "Target 1 distance" }
+      angle: { name: "Target 1 angle" }
+      speed: { name: "Target 1 speed" }
+
+text_sensor:
+  - platform: hlk_ld6004
+    version: { name: "Radar firmware" }
+
+select:
+  - { platform: hlk_ld6004, type: sensitivity, name: "Radar sensitivity" }
+  - { platform: hlk_ld6004, type: trigger_speed, name: "Radar trigger speed" }
+  - { platform: hlk_ld6004, type: install_method, name: "Radar install method" }
+  - { platform: hlk_ld6004, type: operating_mode, name: "Radar operating mode" }
+  - { platform: hlk_ld6004, type: p20_output, name: "Radar OUT pin mode" }
+
+number:
+  - { platform: hlk_ld6004, type: delay_time, name: "Radar presence hold" }
+  - { platform: hlk_ld6004, type: output_interval, name: "Radar output interval" }
+  - { platform: hlk_ld6004, type: dwell_lifecycle, name: "Radar dwell lifecycle" }
+  - { platform: hlk_ld6004, type: z_min, name: "Radar Z min" }
+  - { platform: hlk_ld6004, type: z_max, name: "Radar Z max" }
+  # Detection zone 1 box, metres from the radar. Each change rewrites the zone in the radar's flash.
+  - { platform: hlk_ld6004, type: zone, zone_type: detection, zone: 1, bound: x_min, name: "Zone 1 X min" }
+  - { platform: hlk_ld6004, type: zone, zone_type: detection, zone: 1, bound: x_max, name: "Zone 1 X max" }
+  - { platform: hlk_ld6004, type: zone, zone_type: detection, zone: 1, bound: y_min, name: "Zone 1 Y min" }
+  - { platform: hlk_ld6004, type: zone, zone_type: detection, zone: 1, bound: y_max, name: "Zone 1 Y max" }
+
+button:
+  - { platform: hlk_ld6004, type: auto_interference, name: "Radar learn interference" }
+  - { platform: hlk_ld6004, type: clear_interference, name: "Radar clear interference" }
+  - { platform: hlk_ld6004, type: reset_detection_area, name: "Radar reset detection area" }
+  - { platform: hlk_ld6004, type: reset_unmanned, name: "Radar reset to unoccupied" }

@@ -43,4 +43,5 @@ switching frequency ≥2 MHz. Suggested: XIAO 5V pin → 1 A 3.3 V LDO (e.g. AMS
 ≥1 A, not a bare USB 2.0 port. The left-hand header (GND, SWCLK, SWDIO, BOOT1, 3V3) is debug only; the datasheet
 says BOOT1 must be low at start, so if the module is silent, try tying BOOT1 to GND.
 
-See `example.yaml` for the ESPHome config.
+See `example.yaml` for the ESPHome config, `ld6004-xiao-esp32-c6.yaml` for a ready-to-flash XIAO ESP32-C6 config
+(secrets.yaml with `wifi_ssid` / `wifi_password`), and `ld6004-esp32-c3-supermini.yaml` for the C3 Super Mini.
