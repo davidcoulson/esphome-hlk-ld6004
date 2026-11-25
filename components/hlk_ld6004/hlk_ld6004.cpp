@@ -127,9 +127,12 @@ void HLKLD6004::handle_byte_(uint8_t b) {
       this->len_ = (this->header_[3] << 8) | this->header_[4];
       this->type_ = (this->header_[5] << 8) | this->header_[6];
       this->idx_ = 0;
-      if (this->len_ == 0)
-        this->state_ = DATA_CKSUM;
-      else if (this->len_ > sizeof(this->data_))
+      if (this->len_ == 0) {
+        // TinyFrame sends no data checksum after an empty frame (the ACKs). Waiting for one ate the
+        // SOF of the reply that follows each ACK, so every queried setting was lost.
+        this->process_frame_(this->type_, this->data_, 0);
+        this->state_ = WAIT_SOF;
+      } else if (this->len_ > sizeof(this->data_))
         this->state_ = WAIT_SOF;
       else
         this->state_ = DATA;
@@ -140,8 +143,7 @@ void HLKLD6004::handle_byte_(uint8_t b) {
         this->state_ = DATA_CKSUM;
       break;
     case DATA_CKSUM:
-      // Empty frames (ACKs) carry 0xFF, which is checksum() of zero bytes.
-      if (b == (this->len_ ? checksum(this->data_, this->len_) : 0xFF)) {
+      if (b == checksum(this->data_, this->len_)) {
         this->process_frame_(this->type_, this->data_, this->len_);
       } else {
         ESP_LOGV(TAG, "Bad data checksum, type 0x%04X", this->type_);
@@ -323,9 +325,10 @@ void HLKLD6004::send_frame_(uint16_t type, const uint8_t *data, uint16_t len) {
                     0};
   hdr[7] = checksum(hdr, 7);
   this->write_array(hdr, 8);
-  if (len > 0)
+  if (len > 0) {  // an empty frame has no data checksum
     this->write_array(data, len);
-  this->write_byte(len > 0 ? checksum(data, len) : 0xFF);
+    this->write_byte(checksum(data, len));
+  }
 }
 
 void HLKLD6004::send_control(uint32_t subcmd) {
@@ -343,9 +346,14 @@ void HLKLD6004::send_zone_(uint8_t type, uint8_t zone) {
 }
 
 void HLKLD6004::request_config_() {
-  for (uint8_t cmd : QUERY_CMD)
-    this->send_control(cmd);
-  this->send_frame_(TYPE_FIRMWARE, nullptr, 0);
+  // One query every 200 ms: sent back-to-back, the radar rejects them ("[TF] Body cksum mismatch").
+  for (uint8_t i = 0; i <= sizeof(QUERY_CMD); i++)
+    this->set_timeout(i * 200, [this, i]() {
+      if (i < sizeof(QUERY_CMD))
+        this->send_control(QUERY_CMD[i]);
+      else
+        this->send_frame_(TYPE_FIRMWARE, nullptr, 0);
+    });
 }
 
 void HLKLD6004::select_changed(uint8_t kind, size_t index) {
