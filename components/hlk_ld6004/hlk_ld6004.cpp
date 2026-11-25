@@ -1,6 +1,7 @@
 #include "hlk_ld6004.h"
 #include "esphome/core/log.h"
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 
 namespace esphome {
@@ -225,8 +226,11 @@ void HLKLD6004::process_frame_(uint16_t type, const uint8_t *data, uint16_t len)
       break;
     case TYPE_FIRMWARE:
       // Field meaning of the 4 bytes is unverified; shown as dotted bytes.
-      if (len >= 4 && this->version_ != nullptr)
-        this->version_->publish_state(str_sprintf("%u.%u.%u.%u", data[0], data[1], data[2], data[3]));
+      if (len >= 4 && this->version_ != nullptr) {
+        char buf[16];  // "255.255.255.255" + NUL; str_sprintf() is gone from ESPHome 2026.11
+        snprintf(buf, sizeof(buf), "%u.%u.%u.%u", data[0], data[1], data[2], data[3]);
+        this->version_->publish_state(buf);
+      }
       break;
     default:
       break;  // ACKs and unknown frames
